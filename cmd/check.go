@@ -22,6 +22,7 @@ THE SOFTWARE.
 package cmd
 
 import (
+	"github.com/rzjfr/sayit/audio"
 	"github.com/spf13/cobra"
 )
 
@@ -36,6 +37,8 @@ Cobra is a CLI library for Go that empowers applications.
 This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 	Run: func(cmd *cobra.Command, args []string) {
+		//audio.Play("/home/rjafari/.sayit/oxford/uk/h/hel/hello/hello__gb.mp3")
+		audio.Play("hello")
 		sugarLogger.Debugf("Debug")
 		sugarLogger.Infof("Info")
 		sugarLogger.Errorf("Error")
