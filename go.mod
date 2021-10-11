@@ -4,6 +4,7 @@ go 1.17
 
 require (
 	github.com/faiface/beep v1.1.0
+	github.com/hermanschaaf/enchant v0.0.0-20140423042126-f5e1f010324c
 	github.com/mitchellh/go-homedir v1.0.0
 	github.com/spf13/cobra v1.2.1
 	go.uber.org/zap v1.19.1
@@ -20,5 +21,5 @@ require (
 	golang.org/x/exp v0.0.0-20200224162631-6cc2880d07d6 // indirect
 	golang.org/x/image v0.0.0-20190802002840-cff245a6509b // indirect
 	golang.org/x/mobile v0.0.0-20190719004257-d2bd2a29d028 // indirect
-	golang.org/x/sys v0.0.0-20210510120138-977fb7262007 // indirect
+	golang.org/x/sys v0.0.0-20210809222454-d867a43fc93e // indirect
 )

@@ -3,7 +3,7 @@ Pronouncing given word using Oxford Advanced Learner's Dictionary website.
 
 ``` bash
 # Ubuntu
-sudo apt-get install portaudio19-dev libmpg123-dev
+sudo apt-get install portaudio19-dev libmpg123-dev libenchant-dev
 make && make install
 ```
 
@@ -16,7 +16,7 @@ or just copy as `sayit` somewhere in your path and use it with goldendict:
 - choose "Audio" in type field.
 - in "Command Line" field copy and paste this command:
 ``` bash
-sayit check %GDWORD%
+sayit check -o %GDWORD%
 ```
 - write "sayit" in "Name" field.
 
