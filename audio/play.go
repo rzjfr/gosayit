@@ -18,35 +18,29 @@ import (
 const basePath = "~/.sayit/test/oxford/uk"
 const baseURL = "https://www.oxfordlearnersdictionaries.com/media/english/uk_pron"
 
-// to set LogLevel
-func InitLogger(verbose bool) {
-	log.InitLogger(verbose)
-	defer log.Logger.Sync()
-}
-
 // TODO: error handling refactor
 // play the audio of the word from disk, download it before playing if not present
 func Play(word string) error {
-	filePath, err := getFile(word) // get teh absolute path of the mp3 file
+	filePath, err := getFile(word) // get the absolute path of the mp3 file
 	if err != nil {
 		log.Logger.Debug(err)
 		return err
 	}
 
-	f, err := os.Open(filePath) // open the mp3 file
+	file, err := os.Open(filePath) // open the mp3 file
 	if err != nil {
 		log.Logger.Debug(err)
 		return err
 	}
-	defer f.Close()
+	defer file.Close()
 
-	stream(f) // stream the file from disk
+	stream(file) // stream the file from disk
 	return err
 }
 
 // Audio streams the given file if it's in mp3 format
-func stream(f *os.File) {
-	streamer, format, _ := mp3.Decode(f)
+func stream(file *os.File) {
+	streamer, format, _ := mp3.Decode(file)
 	defer streamer.Close()
 
 	speaker.Init(format.SampleRate, format.SampleRate.N(time.Second/10))
@@ -55,7 +49,7 @@ func stream(f *os.File) {
 	done := make(chan bool)
 	speaker.Play(beep.Seq(streamer, beep.Callback(func() { done <- true })))
 	<-done
-	log.Logger.Debugf("Success in playing from disk, file: %v", f)
+	log.Logger.Debugf("Success in playing from file: %v", file)
 }
 
 // Downloads and saves the fils from the given url in the given local path
@@ -65,7 +59,7 @@ func saveFile(filePath string, url string) error {
 		if err := os.MkdirAll(basePath, 0775); err != nil {
 			return err
 		}
-		log.Logger.Debugf("Created filePath: %v", filePath)
+		log.Logger.Debugf("Success in creating filePath: %v", filePath)
 	}
 
 	resp, err := http.Get(url)
