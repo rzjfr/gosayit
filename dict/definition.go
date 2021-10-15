@@ -6,89 +6,128 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"strings"
+	"regexp"
 
 	"github.com/PuerkitoBio/goquery"
 	"github.com/corpix/uarand"
 	"github.com/mitchellh/go-homedir"
 	"github.com/rzjfr/sayit/log"
+	"jaytaylor.com/html2text"
 )
 
 const basePath = "~/.sayit/test/oxford/uk"
 const baseURL = "https://www.oxfordlearnersdictionaries.com/definition/english/"
 
-//TODO: get quiet flag of the cli
 func Define(word string) error {
-	filePath, err := getFile(word) // get the absolute path of the html file
+	// Get absolute path of the HTML file
+	filePath, err := getFile(word)
 	if err != nil {
 		log.Logger.Debug(err)
 		return err
 	}
-
+	// Open HTML file
 	file, err := os.Open(filePath)
 	if err != nil {
 		log.Logger.Debug(err)
 		return err
 	}
-
-	// Load the HTML document
+	// Load the HTML document to be parsed
 	doc, err := goquery.NewDocumentFromReader(file)
 	if err != nil {
 		return err
 	}
-
+	// Print
 	_ = heading(doc)
-	_ = phonetics(doc)
 	_ = definitions(doc)
 	_ = idioms(doc)
-	return nil
+	_ = phrasals(doc)
+
+	return err
 }
 
-func phonetics(doc *goquery.Document) error {
-	fmt.Printf("%s\n\n", doc.Find(".phons_br").Text())
-
+//TODO: set this method as alternative
+func defHTML(doc *goquery.Document) error {
+	main := doc.Find("div.responsive_entry_center_wrap")
+	main.Not("div#ring-links-box")
+	html, _ := main.Html()
+	text, _ := html2text.FromString(html, html2text.Options{PrettyTables: true})
+	fmt.Println(text)
 	return nil
 }
 
 func heading(doc *goquery.Document) error {
 	doc.Find("div.webtop").Each(func(i int, webtop *goquery.Selection) {
-		head := strings.Trim(webtop.Find("h1.headword").Text(), " ")
-		pos := strings.Trim(webtop.Find("span.pos").Text(), " ")
-		labels := strings.Trim(webtop.Find("span.labels").Text(), " ")
-		variants := strings.Trim(webtop.Find("div.variants").Text(), " ")
-		fmt.Printf("%s %s %s %s ", head, pos, labels, variants)
+		if webtop.Find("h1.headword").Length() > 0 {
+			// header
+			head := webtop.Find("h1.headword").Text()
+			pos := webtop.Find("span.pos").Text()
+			phonetics := webtop.Find(".phons_br").Text()
+			fmt.Printf("%s %s %s \n", head, pos, phonetics)
+			//variants
+			webtop.Find("div.variants").Each(func(i int, variants *goquery.Selection) {
+				fmt.Printf("  %s\n", variants.Text())
+			})
+			// inflections
+			inflections := webtop.Find("div.inflections")
+			if inflections.Length() > 0 {
+				fmt.Printf("  %s\n\n", inflections.Text())
+			}
+		}
 	})
+	//origin
+	origin := doc.Find("[unbox=\"wordorigin\"] span.body")
+	if origin.Length() > 0 {
+		fmt.Printf("  Origin: %s\n\n", origin.Text())
+	}
 	return nil
 }
 
 func definitions(doc *goquery.Document) error {
-	doc.Find("[hclass=\"sense\"]").Each(func(i int, sense *goquery.Selection) {
-		title := sense.Find("li.span.cf").Text()
-		grammar := sense.Find("span.grammar").Text()
-		label := sense.Find("span.dtxt").Text()
-		labels := sense.Find("span.labels").Text()
-		meaning := sense.Find("span.def").Text()
-		fmt.Printf("%d: %s %s %s %s %s \n", i+1, grammar, title, label, labels, meaning)
-		sense.Find("li[htag=\"li\"]").Each(func(i int, example *goquery.Selection) {
+	doc.Find("ol.senses_multiple span.shcut-g").Each(func(i int, sense *goquery.Selection) {
+		title := sense.Find("[hclass=\"sense\"] li.span.cf").Text()
+		part := sense.Find("h2").Text()
+		grammar := sense.Find("[hclass=\"sense\"] span.grammar").Text()
+		label := sense.Find("[hclass=\"sense\"] span.dtxt").Text()
+		labels := sense.Find("[hclass=\"sense\"] span.labels").Text()
+		meaning := sense.Find("[hclass=\"sense\"] span.def").Text()
+		output := fmt.Sprintf("%d: %s %s %s %s %s %s \n", i+1, part, grammar, title, label, labels, meaning)
+		fmt.Println(regexp.MustCompile(`\s{2}`).ReplaceAllString(output, " "))
+		sense.Find("[hclass=\"sense\"] li[htag=\"li\"]").Each(func(i int, example *goquery.Selection) {
 			if example.Find("span.x").Text() != "" {
 				fmt.Printf("  • %s %s\n", example.Find("span.cf").Text(), example.Find("span.x").Text())
 			}
 		})
+		fmt.Printf("  %s\n", sense.Find("ol.senses_multiple span.xrefs").Text())
 	})
 	return nil
 }
 
 func idioms(doc *goquery.Document) error {
-	fmt.Printf("\nIdioms:\n")
-	doc.Find("span.idm-g").Each(func(i int, idiom *goquery.Selection) {
-		meaning := idiom.Find("span.idm").Text()
-		fmt.Printf("  %s:\n", meaning)
-		idiom.Find("ul.examples li[htag=\"li\"]").Each(func(i int, example *goquery.Selection) {
-			if example.Find("li span.x").Text() != "" {
-				fmt.Printf("  - %s %s\n", example.Find("li span.cf").Text(), example.Find("li span.x").Text())
-			}
+	idioms := doc.Find("span.idm-g")
+	if idioms.Length() > 0 {
+		fmt.Printf("\nIdioms:\n")
+		doc.Find("span.idm-g").Each(func(i int, idiom *goquery.Selection) {
+			meaning := idiom.Find("span.idm").Text()
+			fmt.Printf("  %s:\n", meaning)
+			idiom.Find("ul.examples li[htag=\"li\"]").Each(func(i int, example *goquery.Selection) {
+				if example.Find("li span.x").Text() != "" {
+					fmt.Printf("  - %s %s\n", example.Find("li span.cf").Text(), example.Find("li span.x").Text())
+				}
+			})
 		})
-	})
+	}
+	return nil
+}
+
+func phrasals(doc *goquery.Document) error {
+	verbs := doc.Find("aside.phrasal_verb_links span.xr-g")
+	if verbs.Length() > 0 {
+		fmt.Printf("\nPhrasal Verbs: [")
+		verbs.Each(func(i int, verb *goquery.Selection) {
+			fmt.Printf("%s, ", verb.Text())
+		})
+		fmt.Printf("]\n")
+	}
 	return nil
 }
 
